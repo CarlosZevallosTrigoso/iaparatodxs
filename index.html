@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>i.a. para todxs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root { --background-color: #ffffff; --text-color: #000000; }
+        body { 
+            background-color: var(--background-color); 
+            color: var(--text-color); 
+            font-family: 'Roboto Mono', monospace; 
+            font-size: 16px; 
+            line-height: 1.5; 
+            margin: 0; 
+            padding: 10vh 20px 20px 20px;
+            box-sizing: border-box; 
+        }
+        .terminal-container { 
+            width: 100%; 
+            max-width: 800px; 
+            margin: 0; 
+        }
+        h1 {
+            font-size: 1em; 
+            font-weight: normal; 
+            margin-bottom: 1.5em;
+            padding-bottom: 0.5em;
+        }
+        #notas-container { word-break: break-word; }
+        .nota { 
+            margin-bottom: 1em; 
+        }
+        .timestamp { 
+            margin-right: 15px; 
+            color: #a11d1d;
+            font-size: 0.9em;
+        }
+        .enlace {
+            color: #0066cc;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        .enlace:hover {
+            text-decoration: underline;
+        }
+        .loading {
+            color: #666;
+        }
+        .admin-link {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 12px;
+            font-family: 'Roboto Mono', monospace;
+        }
+        .admin-link:hover {
+            background: #555;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding-left: 20vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="edit.html" class="admin-link">Admin</a>
+    
+    <div class="terminal-container">
+        <h1>i.a. para todxs</h1>
+        <div id="notas-container">Cargando notas...</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getFirestore, collection, query, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB3NnCbe8cxxgrvNaaIkR_vrjuvN1OSq4w",
+            authDomain: "ia-board.firebaseapp.com",
+            projectId: "ia-board",
+            storageBucket: "ia-board.firebasestorage.app",
+            messagingSenderId: "981485996371",
+            appId: "1:981485996371:web:62d5d4934566b20c26b9a6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const notasContainer = document.getElementById('notas-container');
+
+        function formatearFecha(timestamp) {
+            const fecha = timestamp.toDate();
+            const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const diaSemana = diasSemana[fecha.getDay()];
+            
+            const dia = String(fecha.getDate()).padStart(2, '0');
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            const año = fecha.getFullYear();
+            
+            let horas = fecha.getHours();
+            const minutos = String(fecha.getMinutes()).padStart(2, '0');
+            const segundos = String(fecha.getSeconds()).padStart(2, '0');
+            
+            const esPM = horas >= 12;
+            horas = horas % 12;
+            if (horas === 0) horas = 12;
+            const horasStr = String(horas).padStart(2, '0');
+            
+            const periodo = esPM ? 'p.m.' : 'a.m.';
+            
+            return `[${diaSemana} ${dia}/${mes}/${año}  ${horasStr}:${minutos}:${segundos} ${periodo}]`;
+        }
+
+        function renderizarNotas(notas) {
+            if (notas.length === 0) {
+                notasContainer.innerHTML = 'No hay entradas en el sistema.';
+                return;
+            }
+
+            let html = '';
+            notas.forEach(nota => {
+                const timestamp = formatearFecha(nota.timestamp);
+                const enlaceHtml = nota.enlace ? 
+                    `<a href="${nota.enlace}" target="_blank" class="enlace">${nota.textoEnlace || '[enlace]'}</a>` : '';
+                const estrellasHtml = nota.estrellas ? 
+                    `<span style="color: black; margin-left: 10px;">${'★'.repeat(nota.estrellas)}</span>` : '';
+                
+                html += `
+                    <div class="nota">
+                        <span class="timestamp">${timestamp}</span><span class="contenido">${nota.contenido}</span>${enlaceHtml}${estrellasHtml}
+                    </div>
+                `;
+            });
+            
+            notasContainer.innerHTML = html;
+        }
+
+        const q = query(collection(db, 'notas'), orderBy('timestamp', 'desc'));
+        onSnapshot(q, (querySnapshot) => {
+            const notas = [];
+            querySnapshot.forEach((doc) => {
+                notas.push({ id: doc.id, ...doc.data() });
+            });
+            renderizarNotas(notas);
+        }, (error) => {
+            console.error('Error cargando notas:', error);
+            notasContainer.innerHTML = 'Error cargando notas.';
+        });
+    </script>
+</body>
+</html>
