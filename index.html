@@ -174,14 +174,15 @@
             let html = '';
             notas.forEach(nota => {
                 const timestamp = formatearFecha(nota.timestamp);
-                const enlaceHtml = nota.enlace ? 
-                    `<a href="${nota.enlace}" target="_blank" class="enlace">${nota.textoEnlace || '[enlace]'}</a>` : '';
                 const estrellasHtml = nota.estrellas ? 
-                    `<span style="color: black; margin-left: 10px;">${'★'.repeat(nota.estrellas)}</span>` : '';
+                    ` ${'★'.repeat(nota.estrellas)}` : '';
+                const enlaceHtml = nota.enlace ? 
+                    `<br>>> <a href="${nota.enlace}" target="_blank" class="enlace">${nota.textoEnlace || '[enlace]'}</a>` : '';
                 
                 html += `
                     <div class="nota">
-                        <span class="timestamp">${timestamp}</span><span class="contenido">${nota.contenido}</span>${enlaceHtml}${estrellasHtml}
+                        <span class="timestamp">${timestamp}${estrellasHtml}</span><br>
+                        <span class="contenido">${nota.contenido}</span>${enlaceHtml}
                     </div>
                 `;
             });
