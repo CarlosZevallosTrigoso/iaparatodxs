@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>i.a. para todxs - Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root { --background-color: #ffffff; --text-color: #000000; }
+        body { 
+            background-color: var(--background-color); 
+            color: var(--text-color); 
+            font-family: 'Roboto Mono', monospace; 
+            font-size: 16px; 
+            line-height: 1.5; 
+            margin: 0; 
+            padding: 10vh 20px 20px 20px;
+            box-sizing: border-box; 
+        }
+        .terminal-container { 
+            width: 100%; 
+            max-width: 800px; 
+            margin: 0; 
+        }
+        .hidden { display: none; }
+        .prompt::before { content: '> '; margin-right: 8px; }
+        
+        input, textarea, button, select {
+            background-color: transparent;
+            border: none;
+            color: var(--text-color);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 16px;
+            outline: none;
+            padding: 0;
+        }
+        
+        input[type="email"], input[type="password"] {
+            width: 60%;
+            border-bottom: 1px solid #ccc;
+            padding: 5px 0;
+            margin-bottom: 20px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 80px;
+            resize: vertical;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        input[type="url"], input[type="text"] {
+            width: 100%;
+            border-bottom: 1px solid #ccc;
+            padding: 5px 0;
+            margin: 10px 0;
+        }
+        
+        select {
+            background: transparent;
+            border: 1px solid #ccc;
+            padding: 5px;
+            margin: 10px 0;
+        }
+        
+        button {
+            background: #333;
+            color: white;
+            cursor: pointer;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        button:hover {
+            background: #555;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            float: right;
+            padding: 5px 10px;
+            margin: 0;
+            font-size: 12px;
+        }
+        
+        .logout-btn:hover {
+            background: #c82333;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .user-info {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .back-link {
+            color: #0066cc;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        h1, h3 {
+            font-size: 1em;
+            font-weight: normal;
+            margin-bottom: 1.5em;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding-left: 20vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Ver notas públicas</a>
+    
+    <div class="terminal-container">
+        <h1>i.a. para todxs - Admin</h1>
+
+        <div id="auth-container">
+            <h3>Iniciar Sesión</h3>
+            <div class="prompt">
+                email: <input type="email" id="email" />
+            </div>
+            <div class="prompt">
+                password: <input type="password" id="password" />
+            </div>
+            <button onclick="iniciarSesion()">Iniciar Sesión</button>
+            <div id="auth-message"></div>
+        </div>
+
+        <div id="admin-container" class="hidden">
+            <div class="user-info">
+                Conectado como: <span id="user-email"></span>
+                <button class="logout-btn" onclick="cerrarSesion()">Cerrar Sesión</button>
+                <div style="clear: both;"></div>
+            </div>
+            
+            <h3>Agregar Nueva Nota</h3>
+            <div class="prompt">
+                contenido:
+            </div>
+            <textarea id="contenido" placeholder="Escribir nota..."></textarea>
+            
+            <div class="prompt">
+                enlace (opcional):
+            </div>
+            <input type="url" id="enlace" placeholder="https://ejemplo.com" />
+            
+            <div class="prompt">
+                texto del enlace (opcional):
+            </div>
+            <input type="text" id="textoEnlace" placeholder="Ver más" />
+            
+            <div class="prompt">
+                calificación (1-5 estrellas):
+            </div>
+            <select id="estrellas">
+                <option value="">Sin calificar</option>
+                <option value="1">★</option>
+                <option value="2">★★</option>
+                <option value="3">★★★</option>
+                <option value="4">★★★★</option>
+                <option value="5">★★★★★</option>
+            </select>
+            
+            <button onclick="agregarNota()" id="add-btn">Agregar Nota</button>
+            <div id="admin-message"></div>
+            
+            <h3>Notas Existentes</h3>
+            <div id="notas-existentes">Cargando...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { 
+            getAuth, 
+            signInWithEmailAndPassword,
+            onAuthStateChanged,
+            signOut 
+        } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            serverTimestamp,
+            query,
+            orderBy,
+            onSnapshot,
+            deleteDoc,
+            doc
+        } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB3NnCbe8cxxgrvNaaIkR_vrjuvN1OSq4w",
+            authDomain: "ia-board.firebaseapp.com",
+            projectId: "ia-board",
+            storageBucket: "ia-board.firebasestorage.app",
+            messagingSenderId: "981485996371",
+            appId: "1:981485996371:web:62d5d4934566b20c26b9a6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const authContainer = document.getElementById('auth-container');
+        const adminContainer = document.getElementById('admin-container');
+        const userEmail = document.getElementById('user-email');
+        const authMessage = document.getElementById('auth-message');
+        const adminMessage = document.getElementById('admin-message');
+        const notasExistentesContainer = document.getElementById('notas-existentes');
+
+        window.iniciarSesion = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                mostrarMensaje(authMessage, 'Por favor completa todos los campos', 'error');
+                return;
+            }
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                mostrarMensaje(authMessage, 'Sesión iniciada correctamente', 'success');
+            } catch (error) {
+                mostrarMensaje(authMessage, `Error: ${error.message}`, 'error');
+            }
+        };
+
+        window.cerrarSesion = async function() {
+            try {
+                await signOut(auth);
+                mostrarMensaje(authMessage, 'Sesión cerrada', 'success');
+            } catch (error) {
+                mostrarMensaje(adminMessage, `Error: ${error.message}`, 'error');
+            }
+        };
+
+        window.agregarNota = async function() {
+            const contenido = document.getElementById('contenido').value.trim();
+            const enlace = document.getElementById('enlace').value.trim();
+            const textoEnlace = document.getElementById('textoEnlace').value.trim();
+            const estrellas = document.getElementById('estrellas').value;
+            const addBtn = document.getElementById('add-btn');
+
+            if (!contenido) {
+                mostrarMensaje(adminMessage, 'El contenido es requerido', 'error');
+                return;
+            }
+
+            addBtn.disabled = true;
+            addBtn.textContent = 'Agregando...';
+
+            try {
+                const notaData = {
+                    contenido: contenido,
+                    timestamp: serverTimestamp(),
+                    autor: auth.currentUser.email
+                };
+
+                if (enlace) {
+                    notaData.enlace = enlace;
+                    if (textoEnlace) {
+                        notaData.textoEnlace = textoEnlace;
+                    }
+                }
+
+                if (estrellas) {
+                    notaData.estrellas = parseInt(estrellas);
+                }
+
+                await addDoc(collection(db, 'notas'), notaData);
+                
+                document.getElementById('contenido').value = '';
+                document.getElementById('enlace').value = '';
+                document.getElementById('textoEnlace').value = '';
+                document.getElementById('estrellas').value = '';
+                
+                mostrarMensaje(adminMessage, 'Nota agregada correctamente', 'success');
+            } catch (error) {
+                mostrarMensaje(adminMessage, `Error: ${error.message}`, 'error');
+            } finally {
+                addBtn.disabled = false;
+                addBtn.textContent = 'Agregar Nota';
+            }
+        };
+
+        window.borrarNota = async function(id) {
+            if (confirm('¿Estás seguro de que quieres borrar esta nota?')) {
+                try {
+                    await deleteDoc(doc(db, 'notas', id));
+                    mostrarMensaje(adminMessage, 'Nota borrada correctamente', 'success');
+                } catch (error) {
+                    mostrarMensaje(adminMessage, `Error: ${error.message}`, 'error');
+                }
+            }
+        };
+
+        function cargarNotasExistentes() {
+            const q = query(collection(db, 'notas'), orderBy('timestamp', 'desc'));
+            onSnapshot(q, (querySnapshot) => {
+                let html = '';
+                if (querySnapshot.empty) {
+                    html = 'No hay notas.';
+                } else {
+                    querySnapshot.forEach((doc) => {
+                        const nota = doc.data();
+                        const fecha = nota.timestamp.toDate();
+                        const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                        const diaSemana = diasSemana[fecha.getDay()];
+                        
+                        const dia = String(fecha.getDate()).padStart(2, '0');
+                        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                        const año = fecha.getFullYear();
+                        
+                        let horas = fecha.getHours();
+                        const minutos = String(fecha.getMinutes()).padStart(2, '0');
+                        const segundos = String(fecha.getSeconds()).padStart(2, '0');
+                        
+                        const esPM = horas >= 12;
+                        horas = horas % 12;
+                        if (horas === 0) horas = 12;
+                        const horasStr = String(horas).padStart(2, '0');
+                        
+                        const periodo = esPM ? 'p.m.' : 'a.m.';
+                        const fechaFormateada = `[${diaSemana} ${dia}/${mes}/${año}  ${horasStr}:${minutos}:${segundos} ${periodo}]`;
+                        
+                        const estrellasTexto = nota.estrellas ? '★'.repeat(nota.estrellas) : '';
+                        
+                        html += `
+                            <div style="border-bottom: 1px solid #eee; padding: 10px 0; margin-bottom: 10px;">
+                                <span style="color: #a11d1d; font-size: 0.9em;">${fechaFormateada}</span>
+                                <span style="margin-left: 10px;">${nota.contenido}</span>
+                                ${nota.enlace ? `<a href="${nota.enlace}" target="_blank" style="color: #0066cc; margin-left: 10px;">${nota.textoEnlace || '[enlace]'}</a>` : ''}
+                                ${estrellasTexto ? `<span style="color: black; margin-left: 10px;">${estrellasTexto}</span>` : ''}
+                                <button onclick="borrarNota('${doc.id}')" style="background: #dc3545; color: white; border: none; padding: 2px 6px; margin-left: 10px; font-size: 12px; cursor: pointer;">✕</button>
+                            </div>
+                        `;
+                    });
+                }
+                notasExistentesContainer.innerHTML = html;
+            });
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                authContainer.classList.add('hidden');
+                adminContainer.classList.remove('hidden');
+                userEmail.textContent = user.email;
+                cargarNotasExistentes();
+            } else {
+                authContainer.classList.remove('hidden');
+                adminContainer.classList.add('hidden');
+                document.getElementById('email').value = '';
+                document.getElementById('password').value = '';
+            }
+        });
+
+        function mostrarMensaje(elemento, mensaje, tipo) {
+            elemento.innerHTML = `<div class="${tipo}">${mensaje}</div>`;
+            setTimeout(() => {
+                elemento.innerHTML = '';
+            }, 5000);
+        }
+
+        document.getElementById('contenido').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                agregarNota();
+            }
+        });
+    </script>
+</body>
+</html>
