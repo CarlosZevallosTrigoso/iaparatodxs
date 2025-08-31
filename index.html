@@ -198,12 +198,13 @@
             let q;
             
             if (currentFilter === null) {
+                // Consulta sin filtro
                 q = query(collection(db, 'notas'), orderBy('timestamp', 'desc'));
             } else {
+                // Consulta con filtro (sin orderBy para evitar errores de índice)
                 q = query(
                     collection(db, 'notas'), 
-                    where('estrellas', '==', currentFilter),
-                    orderBy('timestamp', 'desc')
+                    where('estrellas', '==', currentFilter)
                 );
             }
             
@@ -212,6 +213,12 @@
                 querySnapshot.forEach((doc) => {
                     notas.push({ id: doc.id, ...doc.data() });
                 });
+                
+                // Ordenar en el cliente cuando hay filtro
+                if (currentFilter !== null) {
+                    notas.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+                }
+                
                 renderizarNotas(notas);
             }, (error) => {
                 console.error('Error cargando notas:', error);
